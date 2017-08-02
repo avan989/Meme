@@ -7,6 +7,7 @@
 //
 
 import UIKit
+import CoreData
 
 class CreateViewController: UIViewController, UITextFieldDelegate, UINavigationBarDelegate {
     
@@ -19,22 +20,31 @@ class CreateViewController: UIViewController, UITextFieldDelegate, UINavigationB
     var Image: UIImage!
     var a=0
     
+    var manageObjectContext: NSManagedObjectContext!
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         shareButton.isEnabled = false
         createImage.image = Image
+        
+        //set delegate to itself to modify
         topText.delegate = self
         bottomText.delegate = self
+        manageObjectContext = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+        
     }
     
     override func viewWillAppear(_ animated: Bool) {
          super.viewWillAppear(animated)
+        //subscribe to keyboard to know if the keyboard is being used
         subscribeToKeyboardNotifications()
         subscribetoKeyboardHide()
     }
     
     override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
+        
+        //unsubscribe to get rid of keyboard
         unsubscribeFromKeyboardWillHide()
         unsubscribeFromKeyboardNotifications()
     }
@@ -78,23 +88,26 @@ class CreateViewController: UIViewController, UITextFieldDelegate, UINavigationB
     
     
     func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        
+        //know which textfield is being call by the tag number
         if textField.tag == 1 {
             TopLabel.text = textField.text
         }else{
-        bottomLabel.text = textField.text
+            bottomLabel.text = textField.text
         }
         return true
     }
     
     //hide keyboard
-    
     func textFieldDidBeginEditing(_ textField: UITextField) {
-        
+      
+        //if top is being call do not move keyboard frame up. Reset "a" value to keep track
         if textField.tag == 1 {
             unsubscribeFromKeyboardWillHide()
             unsubscribeFromKeyboardNotifications()
             self.a = 1
         }else{
+            //if the value "a" has been call once do not move it up again.
             if self.a == 1 {
             subscribeToKeyboardNotifications()
             subscribetoKeyboardHide()
@@ -103,10 +116,13 @@ class CreateViewController: UIViewController, UITextFieldDelegate, UINavigationB
             }
         
     }
-
+    
+    //move keyboard fame back down to zero
     func keyboardWillHide(_ notification:Notification){
         self.view.frame.origin.y = 0
     }
+    
+    //when return key is press, get rid of keyboard
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         view.endEditing(true)
         return false
@@ -115,12 +131,18 @@ class CreateViewController: UIViewController, UITextFieldDelegate, UINavigationB
     //navigation bar
     @IBAction func saveButton(_ sender: Any) {
         let memedImage = generateMemedImage()
-        // Create the meme
-        let meme = Meme(Text1: TopLabel.text!, Text2: bottomLabel.text!, orginalImage: createImage.image!, memedImage: memedImage)
-        //call share appdelegate
-        let object = UIApplication.shared.delegate
-        let appDelegate = object as! AppDelegate
-        appDelegate.meme.append(meme)
+        
+        //save to coreData
+        let imageSaveCoreData = ImageCoreData(context: manageObjectContext)
+        let imageNSData: NSData = UIImagePNGRepresentation(memedImage)! as NSData
+        imageSaveCoreData.image = imageNSData
+        
+        do {
+            try self.manageObjectContext.save()
+        }catch{
+            print("error not saving")
+        }
+        
     }
     
     func generateMemedImage() -> UIImage {
@@ -146,6 +168,7 @@ class CreateViewController: UIViewController, UITextFieldDelegate, UINavigationB
         return memedImage
     }
     
+    //pull up the share button( allow user to asses the email, text .. etc)
     @IBAction func share(_ sender: Any){
         let meme = generateMemedImage() as UIImage!
         let shareView = UIActivityViewController(activityItems: [meme!], applicationActivities: nil)

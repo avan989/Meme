@@ -7,12 +7,18 @@
 //
 
 import UIKit
+import CoreData
 
 class MemeCollectionViewController: UICollectionViewController {
     
-    var indexPath: Int! = nil
+    var indexPath: Int!
+    var manageContextObject: NSManagedObjectContext!
+    var coreDataImage = [ImageCoreData]()
+    
+    
     override func viewDidLoad() {
         super.viewDidLoad()
+        manageContextObject = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
         self.navigationItem.rightBarButtonItem = self.editButtonItem
     }
 
@@ -21,8 +27,7 @@ class MemeCollectionViewController: UICollectionViewController {
         let Index = collectionView?.indexPathsForVisibleItems
         for indexPaths in Index!{
             let cell = collectionView?.cellForItem(at: indexPaths) as! MemeCollectionViewCell
-             cell.isEditing = editing
-             // cell.delegate = self
+            cell.isEditing = editing
         }
     }
     
@@ -31,27 +36,44 @@ class MemeCollectionViewController: UICollectionViewController {
         // Dispose of any resources that can be recreated.
     }
     
+    //return the number of cell to be created
     override func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        let object = UIApplication.shared.delegate
-        let meme = object as! AppDelegate
-        let a = meme.meme.count
-        return a
+        let imageRequest: NSFetchRequest<ImageCoreData> = ImageCoreData.fetchRequest()
+        do {
+            coreDataImage = try manageContextObject.fetch(imageRequest)
+        }catch{}
+ 
+        return coreDataImage.count
     }
     
+    //return the custom cell
     override func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        //fetch request to get all file in coreData
+        let imageRequest: NSFetchRequest<ImageCoreData> = ImageCoreData.fetchRequest()
+        do {
+        coreDataImage = try manageContextObject.fetch(imageRequest)
+        }catch{
+            print("error with fetch request")
+        }
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath) as! MemeCollectionViewCell
-        cell.indexPath = indexPath.row
+        
+        let imageForCell = UIImage(data:coreDataImage[indexPath.row].image! as Data)
+        cell.image.image = imageForCell
+        cell.deleteButtonBackground.isHidden = true
+        
+        //tell the custom cell to delegate itself
         cell.delegate = self
         return cell
     }
   
     
   override func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+    //record the indexpath
         self.indexPath = indexPath.row
         performSegue(withIdentifier: "detailView", sender: self)
     }
 
-   
+   //prepare to send information
      override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "detailView" {
             if let nextViewController = segue.destination as? DetailViewController {
@@ -60,13 +82,27 @@ class MemeCollectionViewController: UICollectionViewController {
     }
 }
 
+//do the code in the custom cell through delegateion
 extension MemeCollectionViewController: MemeCustomCellDelegate{
+    
+//function in the protocle for cell delegation
     func delete (cell: MemeCollectionViewCell){
+        //"item" is the index point for the cell being used in the collection view
         let item = collectionView?.indexPath(for: cell)
         print("cell \(String(describing: item?.item))")
-            let object = UIApplication.shared.delegate
-            let meme = object as! AppDelegate
-            meme.meme.remove(at: (item?.item)!)
-            collectionView?.deleteItems(at: [item!])
+        
+        let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+        
+        let imageDelete = coreDataImage[(item?.row)!]
+        context.delete(imageDelete)
+        
+        do {
+            try self.manageContextObject.save()
+            self.collectionView?.reloadData()
+        }catch{
+            print("delete fail")
+        }
+        
     }
+    
 }

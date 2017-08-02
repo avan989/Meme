@@ -11,10 +11,15 @@ import UIKit
 class HomeViewController: UIViewController,UIImagePickerControllerDelegate,UINavigationControllerDelegate, UIAlertViewDelegate {
     
    weak var imageView: UIImage!
+    @IBOutlet weak var createButton: UIButton!
+    @IBOutlet weak var allMemeButton: UIButton!
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+        
+        //change corner radius of button
+        createButton.layer.cornerRadius = 10
+        allMemeButton.layer.cornerRadius = 10
     }
 
     override func didReceiveMemoryWarning() {
@@ -78,7 +83,6 @@ class HomeViewController: UIViewController,UIImagePickerControllerDelegate,UINav
             imageView = pickImage
             dismiss(animated: true, completion: nil)
        }else{
-       
         }
          dismiss(animated: true, completion: nil)
          performSegue(withIdentifier: "ToCreate", sender: self)
@@ -89,6 +93,8 @@ class HomeViewController: UIViewController,UIImagePickerControllerDelegate,UINav
         dismiss(animated: true, completion: nil)
     }
     
+    
+    //perpare for sending file in segue
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
       if segue.identifier == "ToCreate" {
            if let nextViewController = segue.destination as? CreateViewController {

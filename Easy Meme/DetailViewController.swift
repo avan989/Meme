@@ -7,18 +7,32 @@
 //
 
 import UIKit
+import CoreData
 
 class DetailViewController: UIViewController {
     
     @IBOutlet weak var imageView: UIImageView!
-    var indexpath: Int! = nil
+    var indexpath: Int!
+    var coreDataImage = [ImageCoreData]()
+    let manageObjectContext = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
+    
+
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        let object = UIApplication.shared.delegate
-        let meme = object as! AppDelegate
-        imageView.image = meme.meme[indexpath].memedImage
+        let imageRequest: NSFetchRequest<ImageCoreData> = ImageCoreData.fetchRequest()
+            do {
+                coreDataImage = try manageObjectContext.fetch(imageRequest)
+            }catch{
+                print("error with fetch request")
+            }
+        
+        let imageForCell = UIImage(data:coreDataImage[indexpath].image! as Data)
+    
+        imageView.image = imageForCell
+        
     }
+
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
@@ -27,9 +41,7 @@ class DetailViewController: UIViewController {
     
     @IBAction func share(_ sender: Any)
     {
-        let object = UIApplication.shared.delegate
-        let meme = object as! AppDelegate
-        let shareView = UIActivityViewController(activityItems: [meme.meme[indexpath].memedImage], applicationActivities: nil)
+        let shareView = UIActivityViewController(activityItems: [imageView.image], applicationActivities: nil)
         present(shareView, animated: true, completion: nil)
     }
     
